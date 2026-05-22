@@ -143,3 +143,19 @@ hackathon-fiap
 ├── docker-compose.yml
 └── README.md
 ```
+
+##  Integrantes do Grupo
+-   Nathan
+-   Denys
+-   Fernanda
+
+  ##  Referências
+
+-   FIAP -- Pós IA para Desenvolvedores
+
+  ##  Links 
+
+Git Hub: https://github.com/oliveiradenys/Hackaton_Integrado
+
+Youtube: https://www.youtube.com/watch?v=L5CMw22oQxA
+
