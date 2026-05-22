@@ -1,148 +1,185 @@
 # Hackathon FIAP - Análise Inteligente de Arquitetura de Sistemas
 
-Projeto em microsserviços com Java 21, Spring Boot, RabbitMQ, PostgreSQL, Docker e API Gateway.
+## Sobre o Projeto
 
-## O que o sistema faz
+Este projeto foi desenvolvido para o Hackathon FIAP utilizando arquitetura de microsserviços com Java Spring Boot, RabbitMQ, PostgreSQL, Docker e API Gateway.
 
-1. Recebe uma análise por nome de arquivo ou por upload real de arquivo.
-2. Salva o registro no PostgreSQL com status `PENDING`.
-3. Publica o ID da análise na fila RabbitMQ `analysis.queue`.
-4. O `ai-processing-service` consome a fila, muda o status para `PROCESSING`, gera a análise e salva o resultado como `DONE`.
-5. O `report-service` disponibiliza os relatórios.
-6. O `gateway-service` centraliza o acesso externo.
+O sistema permite realizar upload de diagramas ou arquivos de arquitetura de sistemas, enviar os dados para processamento assíncrono via RabbitMQ e gerar análises automáticas contendo:
 
-> Observação: se `OPENAI_API_KEY` não estiver configurada, o processamento não quebra. O sistema gera uma análise local de demonstração para o fluxo funcionar de ponta a ponta.
+- Componentes identificados
+- Possíveis riscos
+- Recomendações de melhoria
+- Status do processamento
 
-## Serviços
+---
 
-| Serviço | Porta local | Função |
-|---|---:|---|
-| gateway-service | 8080 | Entrada principal da aplicação |
-| upload-service | 8082 | Cria análise e recebe arquivo |
-| ai-processing-service | 8081 | Consome fila e gera análise |
-| report-service | 8083 | Lista relatórios |
-| PostgreSQL | 5432 | Banco de dados |
-| RabbitMQ | 5672 / 15672 | Fila e painel web |
+##  Arquitetura do Projeto
 
-## Como subir com Docker
+![Diagrama de arquitetura](docs/architecture.png)
 
-Na raiz do projeto: 
+O sistema foi dividido em 4 microsserviços:
 
-```bash
-docker compose up --build
-```
+| Serviço | Responsabilidade |
+|---|---|
+| upload-service | Recebe uploads e envia mensagens para fila |
+| ai-processing-service | Processa os dados e salva análises |
+| report-service | Disponibiliza os relatórios |
+| gateway-service | Centraliza acesso aos endpoints |
 
-O Dockerfile de cada serviço já faz o build Maven dentro do container. Não é obrigatório gerar os JARs antes.
+---
 
-Se quiser usar OpenAI real:
+## Tecnologias Utilizadas
 
-### PowerShell
+### Backend
+- Java 21
+- Spring Boot 3
+- Spring Data JPA
+- Spring AMQP
+- Spring Cloud Gateway
 
-```powershell
-$env:OPENAI_API_KEY="sua_chave_aqui"
-docker compose up --build
-```
+### Banco de Dados
+- PostgreSQL
 
-### Linux/Mac/Git Bash
+### Mensageria
+- RabbitMQ
 
-```bash
-export OPENAI_API_KEY="sua_chave_aqui"
-docker compose up --build
-```
+### Infraestrutura
+- Docker
+- Docker Compose
 
-## Como testar
+### Documentação
+- Swagger OpenAPI
 
-### 1. Verificar Gateway
+---
 
-```bash
-curl http://localhost:8080/health
-```
-
-Resposta esperada:
-
-```txt
-gateway-service UP
-```
-
-### 2. Criar análise simples pelo nome do arquivo
-
-```bash
-curl -X POST "http://localhost:8080/analysis?fileName=diagrama.pdf"
-```
-
-Resposta esperada: JSON com `id`, `fileName`, `status=PENDING`.
-
-### 3. Enviar um arquivo real
-
-```bash
-curl -X POST "http://localhost:8080/analysis/upload" \
-  -F "file=@./docs/architecture.png"
-```
-
-Para PDF:
-
-```bash
-curl -X POST "http://localhost:8080/analysis/upload" \
-  -F "file=@./seu-arquivo.pdf"
-```
-
-Arquivos PDF e TXT têm extração de texto automática. Outros tipos são aceitos, mas entram com uma descrição básica.
-
-### 4. Consultar relatórios
-
-Aguarde alguns segundos e rode:
-
-```bash
-curl http://localhost:8080/reports
-```
-
-Ou por ID:
-
-```bash
-curl http://localhost:8080/reports/1
-```
-
-## Swagger
-
-```txt
-http://localhost:8082/swagger-ui.html
-http://localhost:8083/swagger-ui.html
-```
-
-## RabbitMQ
-
-```txt
-http://localhost:15672
-user: guest
-password: guest
-```
-
-## Correções aplicadas nesta versão
-
-- Corrigidas URLs internas que usavam `localhost` dentro dos containers.
-- Adicionadas variáveis de ambiente para Postgres, RabbitMQ e URLs dos serviços.
-- Corrigido Gateway para chamar `upload-service` e `report-service` pelo nome dos containers.
-- Adicionado endpoint real de upload multipart: `POST /analysis/upload`.
-- Adicionada extração de texto de PDF/TXT no `upload-service`.
-- Corrigida mensagem na fila para usar ID da análise, evitando conflito com arquivos de mesmo nome.
-- Adicionado fallback local caso `OPENAI_API_KEY` não exista ou a chamada para OpenAI falhe.
-- Corrigidos testes unitários que estavam incompatíveis com os construtores atuais.
-- Dockerfiles alterados para build multi-stage com Maven dentro do container.
-- Adicionados healthchecks para Postgres e RabbitMQ.
-- Adicionados `.gitignore` e `.dockerignore`.
-
-## Estrutura
+##  Estrutura do Projeto
 
 ```txt
 hackathon-fiap
+│
 ├── upload-service
 ├── ai-processing-service
 ├── report-service
 ├── gateway-service
 ├── docs/
+│   └── architecture.png
 ├── docker-compose.yml
 └── README.md
 ```
+
+---
+
+##  Fluxo da Aplicação
+
+1. O usuário realiza upload de um arquivo
+2. O `upload-service` envia uma mensagem para o RabbitMQ
+3. O `ai-processing-service` consome a fila
+4. A análise é processada
+5. O resultado é salvo no PostgreSQL
+6. O `report-service` disponibiliza os relatórios
+7. O `gateway-service` centraliza os acessos
+
+---
+
+##  Executando com Docker
+
+### Pré-requisitos
+
+- Docker Desktop
+- Java 21
+- Maven
+
+###  Gerar os JARs
+
+Na raiz do projeto:
+
+```bash
+mvn clean package
+```
+
+###  Subir containers
+
+```bash
+docker compose up --build
+```
+
+---
+
+##  Serviços Disponíveis
+
+| Serviço | Porta |
+|---|---|
+| Gateway | 8080 |
+| Upload Service | 8082 |
+| AI Processing Service | 8081 |
+| Report Service | 8083 |
+| PostgreSQL | 5432 |
+| RabbitMQ | 5672 |
+| RabbitMQ Management | 15672 |
+
+---
+
+##  Swagger
+
+### Upload Service
+
+```txt
+http://localhost:8082/swagger-ui.html
+```
+
+### Report Service
+
+```txt
+http://localhost:8083/swagger-ui.html
+```
+
+---
+
+##  RabbitMQ
+
+### Painel Web
+
+```txt
+http://localhost:15672
+```
+
+### Login
+
+```txt
+user: guest
+password: guest
+```
+
+---
+
+##  Exemplo de Resposta
+
+```json
+{
+  "id": 15,
+  "fileName": "novo-diagrama.pdf",
+  "status": "DONE",
+  "components": "API Gateway\nPostgreSQL\nRabbitMQ\nMicroservices",
+  "risks": "Ponto único de falha\nFalta de redundância",
+  "recommendations": "Adicionar balanceamento\nImplementar replicação"
+}
+```
+
+---
+
+##  Segurança
+
+O projeto utiliza:
+
+- API Gateway
+- Separação de responsabilidades
+- Processamento assíncrono
+- Containers isolados
+- Persistência em banco relacional
+
+---
+
+
 
 ##  Integrantes do Grupo
 -   Nathan
@@ -158,4 +195,3 @@ hackathon-fiap
 Git Hub: https://github.com/oliveiradenys/Hackaton_Integrado
 
 Youtube: https://www.youtube.com/watch?v=L5CMw22oQxA
-
